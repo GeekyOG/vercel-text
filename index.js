@@ -1,112 +1,37 @@
-//jshint esversion:6
-
 const express = require("express");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
-const app = express();
+const axios = require("axios");
 const cors = require("cors");
 
+const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-mongoose.set("strictQuery", false);
+app.post("/api/", async (req, res) => {
+  const encodedParams = new URLSearchParams();
+  encodedParams.set("url", req.body.url);
 
-mongoose.connect(
-  "mongodb+srv://admin-mena:07015168665@cluster0.smzsyju.mongodb.net/todoDB",
-  { useNewUrlParser: true }
-);
-// mongoose.connect("mongodb://localhost:27017/todoDB", {useNewUrlParser: true});
+  const options = {
+    method: "POST",
+    url: "https://url-shortener-service.p.rapidapi.com/shorten",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      "X-RapidAPI-Key": "74ce58cb69mshbbaf506e91ced2cp1d50e8jsnb8420dafcede",
+      "X-RapidAPI-Host": "url-shortener-service.p.rapidapi.com",
+    },
+    data: encodedParams,
+  };
 
-const itemsSchema = {
-  name: String,
-  commpleted: Boolean,
-};
-
-const Item = mongoose.model("Item", itemsSchema);
-
-const defaultItems = [
-  { color: "red" },
-  { color: "purple" },
-  { color: "yellow" },
-  { color: "blue" },
-];
-
-app.get("/api", function (req, res) {
-  Item.find({}, function (err, foundItems) {
-    if (foundItems.length === 0) {
-      Item.insertMany(defaultItems, function (err) {
-        if (err) {
-          console.log(err);
-        } else {
-          console.log("Successfully savevd default items to DB.");
-        }
-      });
-
-      res.send(foundItems);
-    } else {
-      res.send(foundItems);
-    }
-  });
+  try {
+    const response = await axios.request(options);
+    res.json(response.data);
+  } catch (error) {
+    res.json(error.message);
+  }
 });
 
-app.post("/api", function (req, res) {
-  const itemName = req.body.newItem;
-
-  const item = new Item({
-    name: itemName,
-    commpleted: false,
-  });
-  item.save();
-  res.send(item);
-});
-
-app.post("/api/delete", function (req, res) {
-  const ItemId = req.body.id;
-
-  Item.findByIdAndRemove(ItemId, function (err) {
-    if (!err) {
-      res.send("Successfully deleted checked item.");
-    } else {
-      res.send(err.message);
-    }
-  });
-});
-
-app.post("/api/update", function (req, res) {
-  const ItemId = req.body.id;
-  const item = req.body.item;
-
-  Item.findByIdAndUpdate(ItemId, { name: item }, function (err, docs) {
-    if (err) {
-      console.log(err);
-      res.send(docs);
-    } else {
-      console.log("Updated User : ", docs);
-      res.send(docs);
-    }
-  });
-});
-
-app.post("/api/complete", function (req, res) {
-  const ItemId = req.body.id;
-  const completed = req.body.completed;
-
-  Item.findByIdAndUpdate(
-    ItemId,
-    { commpleted: completed },
-    function (err, docs) {
-      if (err) {
-        console.log(err);
-        res.send(docs);
-      } else {
-        console.log("Updated User : ", docs);
-        res.send(docs);
-      }
-    }
-  );
-});
-
-app.listen(process.env.PORT || 5005, function () {
-  console.log("Server started on port 5000");
+const port = process.env.PORT || 8000;
+app.listen(port, function () {
+  console.log(`Server started on port ${port}`);
 });
